@@ -243,11 +243,9 @@ class EmbZGConv(nn.Module):
         else:
             mask = (z > 0.5).reshape(-1, 1)
         # convert integer input to vector node features.
-        x = x.long()
         x = x[:-1]
         x = self.input_emb(x).reshape(x.shape[0], -1)
         x1 = torch.zeros((1, 64)).to('cuda')
-        x = torch.cat((x, x1), dim=0)
         x = self.emb_gn(x)
         xs = []
         x = F.dropout(x, p=self.dropout, training=self.training)
@@ -258,7 +256,6 @@ class EmbZGConv(nn.Module):
             if not (self.gns is None):
                 x = self.gns[layer](x)
             x = self.activation(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.convs[-1](x, edge_index, edge_weight, mask)
         xs.append(x)
 
@@ -345,19 +342,28 @@ class SAWBN(nn.Module):
         preds[id] and pools[id] is used to predict the id-th target. Can be used for SSL.
     '''
     def __init__(self, conv: EmbZGConv, preds: nn.ModuleList,
-                 pools: nn.ModuleList, gcae: GraphConvolutionalAutoencoder):
+                 pools: nn.ModuleList, gcae: Autoencoder):
         super().__init__()
         self.conv = conv
         self.preds = preds
         self.pools = pools
-        self.gcae = gcae
-
+        self.gcae = ae
+                     
+    def NodeEmb(self, x, edge_index, edge_weight, z=None):
+        embs = []
+        for _ in range(x.shape[1]):
+            emb = self.conv(x[:, _, :].reshape(x.shape[0], x.shape[-1]),
+                            edge_index, edge_weight, z)
+            embs.append(emb.reshape(emb.shape[0], 1, emb.shape[-1]))
+        emb = torch.mean(emb, dim=1)
+        return emb
+        
     def Pool(self, emb, subG_node, pool):
         batch, pos = pad2batch(subG_node)
         emb = emb[pos]
         emb1 = emb.clone()
-        gcae_covn = self.gcae(emb1.shape[1], 64, emb1.shape[1]).to('cuda')
-        encoded, decoded = gcae_covn(emb1)
+        gcae_covn = self.ae(emb1.shape[1], 64, emb1.shape[1]).to('cuda')
+        encoded, decoded = ae_covn(emb1)
         decoded = F.softmax(decoded, dim=1)
         emb = decoded + emb
         emb = pool(emb, batch)
