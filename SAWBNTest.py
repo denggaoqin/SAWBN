@@ -20,8 +20,6 @@ parser.add_argument('--dataset', type=str, default='ppi_bp')
 parser.add_argument('--use_deg', default=False, action='store_true')
 parser.add_argument('--use_one', default=False, action='store_true')
 parser.add_argument('--use_nodeid', default=True, action='store_true')
-# node label settings
-parser.add_argument('--use_maxzeroone', default=True, action='store_true')
 
 parser.add_argument('--repeat', type=int, default=10)
 parser.add_argument('--device', type=int, default=0)
