@@ -352,16 +352,6 @@ class SAWBN(nn.Module):
         self.pools = pools
         self.gcae = gcae
 
-    def NodeEmb(self, x, edge_index, edge_weight, z=None):
-        embs = []
-        for _ in range(x.shape[1]):
-            emb = self.conv(x[:, _, :].reshape(x.shape[0], x.shape[-1]),
-                            edge_index, edge_weight, z)
-            embs.append(emb.reshape(emb.shape[0], 1, emb.shape[-1]))
-        emb = torch.cat(embs, dim=1)
-        emb = torch.mean(emb, dim=1)
-        return emb
-
     def Pool(self, emb, subG_node, pool):
         batch, pos = pad2batch(subG_node)
         emb = emb[pos]
